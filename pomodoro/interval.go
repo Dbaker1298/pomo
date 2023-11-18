@@ -234,3 +234,13 @@ func (i Interval) Start(ctx context.Context, config *IntervalConfig, start, peri
 		return fmt.Errorf("%w: %d", ErrInvalidState, i.State)
 	}
 }
+
+func (i Interval) Pause(config *IntervalConfig) error {
+	if i.State != StateRunning {
+		return ErrIntervalNotRunning
+	}
+
+	i.State = StatePaused
+
+	return config.repo.Update(i)
+}
