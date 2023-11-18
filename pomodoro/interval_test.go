@@ -86,7 +86,7 @@ func TestGetInterval(t *testing.T) {
 	config := pomodoro.NewConfig(repo, 3*duration, duration, 2*duration)
 
 	// Start loop to execute the test 16 times
-	for i := 0; i < 16; i++ {
+	for i := 1; i <= 16; i++ {
 		var (
 			expCategory string
 			expDuration time.Duration
@@ -183,7 +183,7 @@ func TestPause(t *testing.T) {
 				t.Errorf("End callback should not be executed")
 			}
 
-			periodic := func(pomodoro.Interval) {
+			periodic := func(i pomodoro.Interval) {
 				if err := i.Pause(config); err != nil {
 					t.Fatal(err)
 				}
@@ -263,7 +263,7 @@ func TestStart(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			start := func(pomodoro.Interval) {
+			start := func(i pomodoro.Interval) {
 				if i.State != pomodoro.StateRunning {
 					t.Errorf("Expected state = %q, got %q instead\n", pomodoro.StateRunning, i.State)
 				}
