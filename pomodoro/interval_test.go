@@ -1,6 +1,8 @@
 package pomodoro_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -70,5 +72,71 @@ func TestNewConfig(t *testing.T) {
 				t.Errorf("Expected Long Break Duration %q, got %q instead\n", tc.expect.LongBreakDuration, config.LongBreakDuration)
 			}
 		})
+	}
+}
+
+func TestGetInterval(t *testing.T) {
+	repo, cleanup := getRepo(t)
+	defer cleanup()
+
+	// For this test, need to start and complete each interval to allow GetInterval
+	// to obtain the next category
+	const duration = 1 * time.Millisecond
+	config := pomodoro.NewConfig(repo, 3*duration, duration, 2*duration)
+
+	// Start loop to execute the test 16 times
+	for i := 0; i < 16; i++ {
+		var (
+			expCategory string
+			expDuration time.Duration
+		)
+
+		switch {
+		case i%2 != 0:
+			expCategory = pomodoro.CategoryPomodoro
+			expDuration = 3 * duration
+		case i%8 == 0:
+			expCategory = pomodoro.CategoryLongBreak
+			expDuration = 2 * duration
+		case i%2 == 0:
+			expCategory = pomodoro.CategoryShortBreak
+			expDuration = duration
+		}
+
+		testName := fmt.Sprintf("%s%d", expCategory, i)
+		t.Run(testName, func(t *testing.T) {
+			res, err := pomodoro.GetInterval(config)
+			if err != nil {
+				t.Errorf("Expected no error, got %q instead\n", err)
+			}
+
+			noop := func(pomodoro.Interval) {}
+
+			if err := res.Start(context.Background(), config, noop, noop, noop); err != nil {
+				t.Fatal(err)
+			}
+
+			if res.Category != expCategory {
+				t.Errorf("Expected category %q, got %q instead\n", expCategory, res.Category)
+			}
+
+			if res.PlannedDuration != expDuration {
+				t.Errorf("Expected duration %q, got %q instead\n", expDuration, res.PlannedDuration)
+			}
+
+			if res.State != pomodoro.StateNotStarted {
+				t.Errorf("Expected state = %q, got %q instead\n", pomodoro.StateNotStarted, res.State)
+			}
+
+			ui, err := repo.ByID(res.ID)
+			if err != nil {
+				t.Errorf("Expected no error, got %q instead\n", err)
+			}
+
+			if ui.State != pomodoro.StateDone {
+				t.Errorf("Expected state = %q, got %q instead\n", pomodoro.StateDone, res.State)
+			}
+		})
+
 	}
 }
